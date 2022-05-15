@@ -1793,8 +1793,7 @@ add_executable(indi_usbdewpoint ${usb_dewpoint_SRC})
 target_link_libraries(indi_usbdewpoint indidriver)
 install(TARGETS indi_usbdewpoint RUNTIME DESTINATION bin)
 
-########### 
-DAEnetIP3 Relay I/O Module ###############
+########### DAEnetIP3 Relay I/O Module ###############
  
 SET(daenetip3_SRC
  	${CMAKE_CURRENT_SOURCE_DIR}/drivers/auxiliary/DAEnetIP3.cpp)
