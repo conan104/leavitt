@@ -15,6 +15,7 @@ if(ANDROID OR "${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
 endif()
 
 include(CMakeCommon)
+include(CheckFunctionExists)
 
 # Clang Format support
 IF (UNIX OR APPLE)
@@ -87,9 +88,21 @@ OPTION (INDI_BUILD_DRIVERS "Build INDI Drivers, Tools, and Examples" ON)
 OPTION (INDI_BUILD_CLIENT "Build INDI POSIX Client" ON)
 OPTION (INDI_BUILD_QT5_CLIENT "Build INDI Qt5 Client" OFF)
 OPTION (INDI_BUILD_UNITTESTS "Build INDI tests" OFF)
+OPTION (INDI_BUILD_INTEGTESTS "Build INDI integration tests" OFF)
 OPTION (INDI_BUILD_WEBSOCKET "Build INDI with Websocket support" OFF)
 OPTION (INDI_FAST_BLOB "Build INDI with Fast BLOB support" ON)
+if (UNIX AND NOT APPLE)
+    OPTION(INDI_SHARED_MEMORY "Build INDI with support for UNIX protocol with shared memory" ON)
+else()
+    OPTION(INDI_SHARED_MEMORY "Build INDI with support for UNIX protocol with shared memory (require shm specific settings)" OFF)
+endif()
 OPTION (INDI_CALCULATE_MINMAX "Calculate and store image minimum and maximum values in FITS header" OFF)
+
+CHECK_FUNCTION_EXISTS(mremap HAVE_MREMAP)
+if (HAVE_MREMAP)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_MREMAP")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_MREMAP")
+endif()
 
 ###################################################################################################
 #########################################  Fast Blob  #############################################
@@ -98,6 +111,17 @@ IF (INDI_FAST_BLOB)
 # Append ENCLEN attribute to outgoing BLOB elements to enable fast parsing by clients
 add_definitions(-DWITH_ENCLEN)
 ENDIF(INDI_FAST_BLOB)
+
+###################################################################################################
+####################################  UNIX protocol / SHM  ########################################
+###################################################################################################
+if (INDI_SHARED_MEMORY)
+    if (APPLE)
+        message(WARNING "Shared memory protocol require specific shared memory settings")
+    else()
+        add_definitions(-DENABLE_INDI_SHARED_MEMORY)
+    endif()
+endif()
 
 ###################################################################################################
 ######################################  Calculate Min/Max #########################################
@@ -128,13 +152,15 @@ else()
 
 # 1. Dependencies
 find_package(Threads REQUIRED)
+find_package(Libev REQUIRED)
 # 2. Includes
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 # 3. Build
 SET(indiserver_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/indiserver.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/fq.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/indiserver.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/base64.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sharedblob.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.cpp)
 
 IF (UNITY_BUILD)
     ENABLE_UNITY_BUILD(indiserver indiserver_SRC 10 c)
@@ -142,6 +168,9 @@ ENDIF ()
 
 add_executable(indiserver ${indiserver_SRC})
 target_link_libraries(indiserver ${CMAKE_THREAD_LIBS_INIT})
+target_include_directories(indiserver SYSTEM PRIVATE ${LIBEV_INCLUDE_DIRS})
+target_include_directories(indiserver PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/libs/)
+target_link_libraries(indiserver ${LIBEV_LIBRARIES})
 install(TARGETS indiserver RUNTIME DESTINATION bin)
 endif (WIN32 OR ANDROID)
 endif (INDI_BUILD_SERVER)
@@ -171,15 +200,17 @@ include_directories( ${CFITSIO_INCLUDE_DIR})
 # 3. Build
 
 SET(indiclient_C_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/userio.c
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indiuserio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sharedblob.c
     ${CMAKE_CURRENT_SOURCE_DIR}/base64.c)
 
 SET(indiclient_CXX_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/libastro.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/basedevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/baseclient.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/sharedblob_parse.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/property/indiproperty.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/property/indiproperties.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/property/indipropertybasic.cpp
@@ -246,14 +277,16 @@ include_directories( ${CFITSIO_INCLUDE_DIR})
 # 3. Build
 message(STATUS "Building INDI Client with Qt5 support")
 SET(indiclientqt_C_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/userio.c
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indiuserio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sharedblob.c
     ${CMAKE_CURRENT_SOURCE_DIR}/base64.c)
 SET(indiclientqt_CXX_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/libastro.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/basedevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/baseclientqt.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/sharedblob_parse.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/property/indiproperty.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/property/indiproperties.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/property/indipropertybasic.cpp
@@ -422,11 +455,13 @@ set(fpack_C_SRC
 
 SET(indidriver_C_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/indidriver.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/indidriverio.c
     ${CMAKE_CURRENT_SOURCE_DIR}/indidrivermain.c
     ${CMAKE_CURRENT_SOURCE_DIR}/eventloop.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/userio.c
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indiuserio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sharedblob.c
     ${CMAKE_CURRENT_SOURCE_DIR}/base64.c
     )
 
@@ -434,6 +469,7 @@ SET(indidriver_CXX_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/libastro.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/basedevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/defaultdevice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/sharedblob_parse.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/property/indiproperty.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/property/indiproperties.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/property/indipropertybasic.cpp
@@ -556,6 +592,8 @@ IF (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
     # find has been run. Add an explicit link to avoid runtime errors.
     target_link_libraries(indidriver ${ICONV_LIBRARIES})
 ENDIF(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+
+CHECK_FUNCTION_EXISTS(mremap HAVE_MREMAP)
 
 ##################################################
 ########### INDI Alignment Subsystem #############
@@ -1905,9 +1943,10 @@ SET(indi_get_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/eventloop.c
     ${CMAKE_CURRENT_SOURCE_DIR}/base64.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/getINDIproperty.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/userio.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/indiuserio.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/indiuserio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sharedblob.c)
 
 IF (UNITY_BUILD)
     ENABLE_UNITY_BUILD(indi_get indi_get_SRC 10 c)
@@ -1930,9 +1969,10 @@ SET(indi_set_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/eventloop.c
     ${CMAKE_CURRENT_SOURCE_DIR}/base64.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/setINDIproperty.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/userio.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/indiuserio.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/indiuserio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sharedblob.c)
 
 IF (UNITY_BUILD)
     ENABLE_UNITY_BUILD(indi_set indi_set_SRC 10 c)
@@ -1956,9 +1996,10 @@ SET(indi_eval_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/base64.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/compiler.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/evalINDI.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/userio.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/indiuserio.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/indiuserio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sharedblob.c)
 
 IF (UNITY_BUILD)
     ENABLE_UNITY_BUILD(indi_eval indi_eval_SRC 10 c)
@@ -2046,7 +2087,15 @@ ENDIF ()
 #########################################  Tests  #################################################
 ###################################################################################################
 
-find_package (GTest)
+IF (DEFINED GTEST_ROOT)
+    MESSAGE (STATUS  "Using GTEST from ${GTEST_ROOT}")
+    add_subdirectory(${GTEST_ROOT}
+        "${CMAKE_CURRENT_BINARY_DIR}/googletest" EXCLUDE_FROM_ALL)
+    set(GTEST_FOUND true)
+ELSE (DEFINED GTEST_ROOT)
+    find_package (GTest)
+ENDIF()
+
 find_package (GMock)
 IF (GTEST_FOUND)
   IF (INDI_BUILD_UNITTESTS)
@@ -2055,8 +2104,16 @@ IF (GTEST_FOUND)
   ELSE (INDI_BUILD_UNITTESTS)
     MESSAGE (STATUS  "Not building unit tests")
   ENDIF (INDI_BUILD_UNITTESTS)
+
+  IF (INDI_BUILD_INTEGTESTS)
+    MESSAGE (STATUS  "Building integration tests")
+    ADD_SUBDIRECTORY(integs)
+  ELSE (INDI_BUILD_INTEGTESTS)
+    MESSAGE (STATUS  "Not building integration tests")
+  ENDIF (INDI_BUILD_INTEGTESTS)
+
 ELSE()
-  MESSAGE (STATUS  "GTEST not found, not building unit tests")
+  MESSAGE (STATUS  "GTEST not found, not building tests")
 ENDIF (GTEST_FOUND)
 
 endif (WIN32 OR ANDROID)
