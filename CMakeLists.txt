@@ -516,7 +516,7 @@ SET(indidriver_CXX_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/dsp/dspinterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/dsp/transforms.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/dsp/convolution.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/pid/pid.cpp    
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/pid/pid.cpp
     )
 
 IF (UNITY_BUILD)
@@ -1877,8 +1877,7 @@ install(TARGETS indi_watcher_weather RUNTIME DESTINATION bin )
 
 ########### Weather Safety Proxy ###############
 
-SET(weathersafetyproxy_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/drivers/weather/gason.cpp
+SET(weathersafetyproxy_SRC    
     ${CMAKE_CURRENT_SOURCE_DIR}/drivers/weather/weather_safety_proxy.cpp)
 add_executable(indi_weather_safety_proxy ${weathersafetyproxy_SRC})
 target_link_libraries(indi_weather_safety_proxy indidriver ${CURL})
@@ -1905,7 +1904,6 @@ install(TARGETS indi_vantage_weather RUNTIME DESTINATION bin)
 ########### OpenWeatherMap Driver ###############
 
 SET(OpenWeatherMap_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/drivers/weather/gason.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/drivers/weather/openweathermap.cpp)
 
 IF (UNITY_BUILD)
@@ -2141,6 +2139,7 @@ if (INDI_BUILD_DRIVERS OR INDI_BUILD_CLIENT OR INDI_BUILD_QT5_CLIENT)
         ${CMAKE_CURRENT_SOURCE_DIR}/libs/lilxml.h
         ${CMAKE_CURRENT_SOURCE_DIR}/libs/libastro.h
         ${CMAKE_CURRENT_SOURCE_DIR}/libs/indicom.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/libs/json.h
         ${CMAKE_CURRENT_SOURCE_DIR}/eventloop.h
         ${CMAKE_CURRENT_SOURCE_DIR}/indidriver.h
         ${CMAKE_CURRENT_SOURCE_DIR}/libs/dsp/dsp.h
@@ -2148,7 +2147,7 @@ if (INDI_BUILD_DRIVERS OR INDI_BUILD_CLIENT OR INDI_BUILD_QT5_CLIENT)
         ${CMAKE_CURRENT_SOURCE_DIR}/libs/dsp/fits.h
         ${CMAKE_CURRENT_SOURCE_DIR}/libs/dsp/sdfits.h
         ${CMAKE_CURRENT_SOURCE_DIR}/libs/dsp/fitsidi.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/pid/pid.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/pid/pid.h        
         ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/indibase.h
         ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/indibasetypes.h
         ${CMAKE_CURRENT_SOURCE_DIR}/libs/indibase/basedevice.h
