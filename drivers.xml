@@ -111,6 +111,10 @@
             <driver name="Celestron GPS">indi_celestron_gps</driver>
             <version>3.6</version>
         </device>
+        <device label="LittleFoot Elegance Photo">
+ 	    	    <driver name="lx200 LFEP">indi_lx200lfep</driver>
+            <version>2.0</version>
+        </device> 
         <device label="Astro-Electronic FS-2" manufacturer="Astro-Electronic">
             <driver name="Astro-Electronic FS-2">indi_lx200fs2</driver>
             <version>2.2</version>
@@ -725,6 +729,10 @@
             <driver name="DeepSkyDad FR1">indi_deepskydad_fr1</driver>
             <version>1.0</version>
         </device>
+        <device label="DAEnetIP3">
+            <driver name="DAEnetIP3">indi_daenetip3_relay</driver>
+            <version>1.0</version>
+		    </device> 
         <device label="Wanderer Rotator Lite" manufacturer="Wanderer Astro">
                <driver name="Wanderer Rotator Lite">indi_wanderer_lite_rotator</driver>
                <version>1.0</version>

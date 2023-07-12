@@ -224,6 +224,18 @@ add_executable(indi_usbdewpoint ${usb_dewpoint_SRC})
 target_link_libraries(indi_usbdewpoint indidriver)
 install(TARGETS indi_usbdewpoint RUNTIME DESTINATION bin)
 
+# ########### DAEnetIP3 Relay I/O Module ###############
+SET(daenetip3_SRC
+ 	DAEnetIP3.cpp)
+ 	
+ IF (UNITY_BUILD)
+     ENABLE_UNITY_BUILD(indi_daenetip3_relay daenetip3_SRC 10 cpp)
+ ENDIF ()
+     
+add_executable(indi_daenetip3_relay ${daenetip3_SRC})
+target_link_libraries(indi_daenetip3_relay indidriver)
+install(TARGETS indi_daenetip3_relay RUNTIME DESTINATION bin)
+
 # ########## myDewController Pro Driver ###############
 SET(myDewControllerPro_SRC
     myDewControllerPro.cpp)
