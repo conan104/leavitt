@@ -6,11 +6,7 @@ exec_program("/usr/bin/cmake" ARGS -E create_symlink indi_lx200generic $ENV{DEST
 
 exec_program("/usr/bin/cmake" ARGS -E create_symlink indi_lx200generic $ENV{DESTDIR}/usr/bin/indi_lx200gps)
 
-exec_program("/usr/bin/cmake" ARGS -E create_symlink indi_lx200generic $ENV{DESTDIR}/usr/bin/indi_lx200ap)
-
 exec_program("/usr/bin/cmake" ARGS -E create_symlink indi_lx200generic $ENV{DESTDIR}/usr/bin/indi_lx200ap_v2)
-
-exec_program("/usr/bin/cmake" ARGS -E create_symlink indi_lx200generic $ENV{DESTDIR}/usr/bin/indi_lx200ap_gtocp2)
 
 exec_program("/usr/bin/cmake" ARGS -E create_symlink indi_lx200generic $ENV{DESTDIR}/usr/bin/indi_lx200gemini)
 
